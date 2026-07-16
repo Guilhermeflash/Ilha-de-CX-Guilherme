@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ilha de Atendimento Guilherme | Flash Courier</title>
+<style>
+  :root{
+    --navy: #0B1E3D;
+    --navy-deep: #06132A;
+    --orange: #FF7A1A;
+    --orange-soft: #FFB37A;
+    --paper: #F4F6F9;
+    --grid-line: rgba(255,255,255,0.06);
+    --text-dim: #9FB0C9;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  body{
+    background: var(--navy-deep);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: var(--paper);
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    min-height: 100vh;
+  }
+
+  header{
+    padding: 64px 8vw 40px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .route-line{
+    position:absolute;
+    top:0; right:-10%;
+    width:60%;
+    height:100%;
+    opacity:0.15;
+    background: repeating-linear-gradient(
+      100deg,
+      transparent 0 18px,
+      var(--orange) 18px 20px
+    );
+    pointer-events:none;
+  }
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    font-size:13px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color: var(--orange);
+    font-weight:700;
+    margin-bottom:18px;
+  }
+
+  .eyebrow::before{
+    content:"";
+    width:28px; height:2px;
+    background: var(--orange);
+    display:inline-block;
+  }
+
+  h1{
+    font-size: clamp(34px, 5.5vw, 64px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.02;
+    max-width: 900px;
+  }
+
+  h1 span{ color: var(--orange); }
+
+  .sub{
+    margin-top:20px;
+    max-width: 560px;
+    color: var(--text-dim);
+    font-size: 16px;
+    line-height:1.6;
+  }
+
+  main{
+    padding: 56px 8vw 100px;
+  }
+
+  .section-label{
+    font-size:12px;
+    letter-spacing:2.5px;
+    text-transform:uppercase;
+    color: var(--text-dim);
+    margin-bottom:24px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+
+  .section-label::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .card{
+    background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 10px;
+    padding: 28px 26px 24px;
+    text-decoration:none;
+    color: inherit;
+    position: relative;
+    display:flex;
+    flex-direction:column;
+    min-height: 168px;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease;
+  }
+
+  .card:hover{
+    transform: translateY(-3px);
+    border-color: var(--orange);
+    background: linear-gradient(160deg, rgba(255,122,26,0.10), rgba(255,255,255,0.02));
+  }
+
+  .card .tag{
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color: var(--orange-soft);
+    font-weight:700;
+    margin-bottom:14px;
+  }
+
+  .card h3{
+    font-size:19px;
+    font-weight:700;
+    margin-bottom:10px;
+    letter-spacing:-0.2px;
+  }
+
+  .card p{
+    font-size:13.5px;
+    color: var(--text-dim);
+    line-height:1.55;
+    flex:1;
+  }
+
+  .card .arrow{
+    margin-top:16px;
+    font-size:13px;
+    font-weight:700;
+    color: var(--orange);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .card.placeholder{
+    opacity:0.45;
+    cursor:default;
+  }
+  .card.placeholder:hover{
+    transform:none;
+    border-color: rgba(255,255,255,0.09);
+    background: linear-gradient(160deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+  }
+  .card.placeholder .arrow{ color: var(--text-dim); }
+
+  footer{
+    padding: 30px 8vw 50px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    font-size:12.5px;
+    color: var(--text-dim);
+  }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand .dot{
+    width:9px;height:9px;border-radius:2px;
+    background: var(--orange);
+    transform: rotate(45deg);
+  }
+  .brand b{ color: var(--paper); letter-spacing:0.5px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="route-line"></div>
+  <div class="eyebrow">Flash Courier · Grupo Move3</div>
+  <h1>Ilha de Atendimento <span>Guilherme</span></h1>
+  <p class="sub">Painel central das ferramentas de gestão operacional: SLA, efetividade, validação de endereços e análise de tickets — tudo em um único ponto de acesso.</p>
+</header>
+
+<main>
+  <div class="section-label">Ferramentas ativas</div>
+  <div class="grid">
+
+    <a class="card placeholder" href="#">
+      <span class="tag">SLA · Atendimento</span>
+      <h3>Tickets &amp; SLA</h3>
+      <p>Acompanhamento de prazos, produtividade por colaborador e desvios por franquia/UF.</p>
+      <span class="arrow">Em breve →</span>
+    </a>
+
+    <a class="card placeholder" href="#">
+      <span class="tag">Executivo · Bancos</span>
+      <h3>Flash × Banco BMG</h3>
+      <p>Dashboard executivo de performance logística: efetividade, regionalidade e desvios de endereço.</p>
+      <span class="arrow">Em breve →</span>
+    </a>
+
+    <a class="card placeholder" href="#">
+      <span class="tag">Endereços · CEP</span>
+      <h3>Validador de Cobertura</h3>
+      <p>Checagem offline de CEP, logradouro e numeração contra a base eDNE dos Correios.</p>
+      <span class="arrow">Em breve →</span>
+    </a>
+
+    <a class="card placeholder" href="#">
+      <span class="tag">Diagnóstico · CX</span>
+      <h3>Análise de Tickets</h3>
+      <p>Classificação automática de chamados com regras determinísticas de resposta e escalonamento.</p>
+      <span class="arrow">Em breve →</span>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  <div class="brand"><span class="dot"></span><b>FLASH COURIER</b> — Ilha de Atendimento</div>
+  <div>Portal interno · atualizado continuamente</div>
+</footer>
+
+</body>
+</html>
