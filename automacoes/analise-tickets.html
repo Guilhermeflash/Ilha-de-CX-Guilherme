@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Análise de Tickets Flash Courier — Motor de Regras (sem IA)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1030; --panel:#12163f; --panel2:#1a1f5d; --accent:#ff4000;
+    --accent2:#ff7a3d; --text:#eef0fb; --muted:#a7abd6; --border:#2c3170;
+    --navy:#1a1f5d;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text); padding:32px 24px;
+  }
+  .brand{display:flex; align-items:center; gap:14px; margin-bottom:4px;}
+  .brand img{height:34px;}
+  h1{font-size:22px; margin:0; color:var(--text);}
+  .sub{color:var(--muted); margin-bottom:24px; font-size:14px; margin-top:6px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px;}
+  .drop{
+    border:2px dashed var(--border); border-radius:10px; padding:36px; text-align:center;
+    cursor:pointer; transition:.15s; color:var(--muted);
+  }
+  .drop.drag{border-color:var(--accent); color:var(--accent2); background:#2a1508;}
+  .drop b{color:var(--text);}
+  input[type=file]{display:none;}
+  .row{display:flex; gap:16px; flex-wrap:wrap; margin-top:16px;}
+  .file-pill{
+    background:var(--panel2); border:1px solid var(--border); border-radius:8px;
+    padding:8px 14px; font-size:13px; display:flex; align-items:center; gap:8px;
+  }
+  .file-pill.ok{border-color:var(--accent); color:var(--accent2);}
+  button{
+    background:var(--accent); color:#ffffff; border:none; border-radius:8px;
+    padding:12px 22px; font-weight:700; font-size:14px; cursor:pointer; margin-top:18px;
+  }
+  button:hover:not(:disabled){background:#e63900;}
+  button:disabled{background:#33376e; color:#7b7fb0; cursor:not-allowed;}
+  #log{
+    font-family:ui-monospace,monospace; font-size:12.5px; background:#000;
+    border-radius:8px; padding:14px; max-height:220px; overflow:auto; color:#ffb08a;
+    white-space:pre-wrap; display:none;
+  }
+  #resultBox{display:none;}
+  table{border-collapse:collapse; width:100%; font-size:12px; margin-top:14px;}
+  th,td{border:1px solid var(--border); padding:6px 8px; text-align:left; vertical-align:top;}
+  th{background:var(--navy); color:#fff; position:sticky; top:0;}
+  td.resp{background:#152047; max-width:320px;}
+  td.trat{background:#2a1f08; max-width:320px;}
+  .tablewrap{max-height:480px; overflow:auto; border:1px solid var(--border); border-radius:8px;}
+  .stat{display:flex; gap:24px; margin-top:10px; font-size:13px; color:var(--muted);}
+  .stat b{color:var(--accent2); font-size:18px; display:block;}
+  a.download{
+    display:inline-block; margin-top:16px; background:var(--accent); color:#ffffff;
+    padding:12px 22px; border-radius:8px; font-weight:700; text-decoration:none;
+  }
+  a.download:hover{background:#e63900;}
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <img src="data:image/png;base64,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" alt="Flash Courier">
+  <h1>Análise de Tickets — Motor de Regras</h1>
+</div>
+<div class="sub" style="margin-top:0;">100% no navegador — nada é enviado a servidor algum. Sem Python, sem instalação. Só arraste a planilha e clique em processar.</div>
+
+<div class="card">
+  <div class="drop" id="drop">
+    <div id="dropText">Arraste aqui o arquivo <b>.xlsx</b> com as abas <b>Tickets</b> e <b>Hawbs atualizadas</b> atualizadas<br><span style="font-size:12px">(as demais 8 abas de regras devem estar no MESMO arquivo — Status, Fluxo Clientes, Base descredenciadas, Devolução, Envio Primario, Envio secundario, Regras Especiais, Produtos)</span><br><br>ou clique para selecionar</div>
+    <input type="file" id="fileInput" accept=".xlsx">
+  </div>
+  <div class="row" id="pillRow"></div>
+  <button id="runBtn" disabled>Processar tickets</button>
+  <div id="log"></div>
+</div>
+
+<div class="card" id="resultBox">
+  <div class="stat">
+    <div><b id="statTotal">0</b>Tickets processados</div>
+    <div><b id="statComPrevisao">0</b>Com previsão calculada</div>
+    <div><b id="statInconsist">0</b>Com inconsistência sinalizada</div>
+    <div><b id="statSemHawb">0</b>Sem HAWB localizada</div>
+  </div>
+  <a class="download" id="downloadLink" href="#">⬇ Baixar planilha de resultado (.xlsx)</a>
+  <div class="tablewrap" style="margin-top:18px;">
+    <table id="resultTable"></table>
+  </div>
+</div>
+
+<script>
+/* ======================================================================
+   MOTOR DE REGRAS — porta 1:1 do motor_regras.py para JavaScript.
+   Roda inteiramente no navegador (nenhum servidor, nenhum Python).
+   ====================================================================== */
+
+const MATRIZ_INSTITUCIONAL = { "UNICRED DO BRASIL SAO": "Matriz Flash", "FLIX MOVEL": "Matriz Flash" };
+// "Aguardando Telemarketing" NUNCA entra na lista de alteração direta — regra explícita:
+// esses casos sempre exigem tratativa/solicitação do cliente (via Pegasus).
+const STATUS_PERMITE_ALTERACAO_ENDERECO = new Set(["AGUARDANDO POSTAGEM"]);
+const STATUS_CUSTODIA_RESP_CLIENTE = new Set(["AGUARDANDO TELEMARKETING","AGUARDANDO TELEMARKETING / CUSTODIA"]);
+const STATUS_CICLO_ENCERRADO = new Set(["CICLO OPERACIONAL ENCERRADO"]);
+const STATUS_EXCLUI_PREVISAO = new Set(["ENTREGUE","ROTEADO CORREIOS","ROTEADO PARA CORREIOS","EM CUSTODIA","SINISTRO","NAO COLETADO","DEVOLVIDO","DEVOLVIDO SEM REENVIO"]);
+const STATUS_TRANSFERENCIA = new Set(["PREPARADA PARA A TRANSFERENCIA","RECEPCIONADO NO HUB","EM VIAGEM - HUB"]);
+const PI_PRAZO_DIAS_UTEIS = 5;
+
+/* ======================================================================
+   TABELA DE REGRAS POR "ÚLTIMO STATUS" (documento "Regras de Análise dos
+   Últimos Status"). Cada função recebe (hawb, ticket, idx, bases) e
+   devolve:
+     { previsao: Date|null, origem: string, semPrevisao: bool,
+       respostaExtra: string|null, tratativaExtra: string[] }
+   Regras gerais aplicadas depois, sempre: nunca previsão anterior a hoje
+   (aplicarPisoHoje), respeitar fins de semana/feriados (somaDiasUteis).
+   ====================================================================== */
+const STATUS_RULES = {};
+
+function temSLA(hawb){ return !!(toDate(hawb["DATA SLA"]) || toDate(hawb["DATA SLA AJUSTADO"])); }
+function dataSLA(hawb){ return toDate(hawb["DATA SLA"]) || toDate(hawb["DATA SLA AJUSTADO"]); }
+
+function validarEnderecoCampos(hawb){
+  const campos = ["CEP DE DESTINO","CIDADE","UF","LOGRADOURO","NUMERO","COMPLEMENTO"];
+  const presentes = campos.filter(c => hawb[c] !== undefined && hawb[c] !== null && hawb[c] !== "");
+  return presentes;
+}
+
+STATUS_RULES["HAWB DADOS CADASTRADOS"] = (hawb) => {
+  if(temSLA(hawb)) return null;
+  const base = toDate(hawb["DATA POSTAGEM"]) || toDate(hawb["DATA ULTIMO STATUS"]) || hojeSemHora();
+  const mov = somaDiasUteis(base, 2);
+  const previsao = somaDiasUteis(mov, 1);
+  return { previsao, origem: "Sem SLA cadastrado — D+2 úteis (movimentação inicial) + D+1 útil (recebimento na base de destino)", semPrevisao:false, tratativaExtra:[] };
+};
+
+STATUS_RULES["EM ARQUIVO - AGUARDANDO POSTAGEM"] = (hawb, ticket, idx) => {
+  const fluxoCli = idx.fluxoPorCliente.get(norm(ticket["CLIENTE"]));
+  const origem = norm((fluxoCli && fluxoCli["ORIGEM"]) || hawb["ORIGEM"] || "");
+  const tratativaExtra = [];
+  let respostaExtra;
+  if(origem.includes("GRAFICA")){
+    tratativaExtra.push("Origem = Gráfica — SOLICITAR Romaneio de Coleta.");
+    respostaExtra = "Prezado(a), seu documento está em fase de emissão/postagem. Estamos validando a coleta junto à origem responsável.";
+  } else if(origem.includes("COLETA")){
+    tratativaExtra.push("Origem = Coleta — SOLICITAR Número da Coleta.");
+    respostaExtra = "Prezado(a), seu documento aguarda confirmação de postagem. Estamos validando os dados da coleta.";
+  } else if(origem.includes("ESTOQUE")){
+    tratativaExtra.push("Origem = Estoque — informar que será validado junto ao time operacional.");
+    respostaExtra = "Prezado(a), seu documento aguarda postagem. Estamos validando os dados junto à nossa equipe operacional.";
+  } else {
+    tratativaExtra.push("Origem do documento não identificada em Fluxo Clientes — validar manualmente (Gráfica/Coleta/Estoque).");
+    respostaExtra = "Prezado(a), seu documento aguarda confirmação de postagem em nossa Matriz Flash.";
+  }
+  return { previsao:null, origem:"Aguardando postagem — sem previsão de entrega até confirmação da coleta/postagem", semPrevisao:true, respostaExtra, tratativaExtra };
+};
+
+STATUS_RULES["POSTADO - LOGISTICA INICIADA"] = (hawb) => {
+  if(temSLA(hawb)) return null;
+  const base = toDate(hawb["DATA ULTIMO STATUS"]) || hojeSemHora();
+  const mov = somaDiasUteis(base, 2);
+  const previsao = somaDiasUteis(mov, 1);
+  return { previsao, origem:"Sem SLA cadastrado — D+2 úteis (movimentação) + D+1 útil (chegada na base de destino)", semPrevisao:false, tratativaExtra:[] };
+};
+
+STATUS_RULES["PREPARADA PARA TRANSFERENCIA"] = (hawb, ticket, idx) => {
+  const franquia = norm(hawb["FRANQUIA ATUAL"]);
+  const produto = norm(hawb["PRODUTO"]);
+  const cidade = norm(hawb["CIDADE"]);
+  const rota = idx.envioSecundarioPorCidade.get(cidade) || idx.envioPrimarioPorFranquiaProduto.get(franquia+"|"+produto);
+  const ttTexto = rota ? (rota["TRANSIT-TIME"] || rota["TRANSIT-TIME PARCEIRO"]) : null;
+  const diasTt = parsePrazoDiasUteis(ttTexto) || 2;
+  const baseChegada = toDate(hawb["DATA ULTIMO STATUS"]) || hojeSemHora();
+  const chegadaBase = somaDiasUteis(baseChegada, diasTt);
+  const sla = dataSLA(hawb);
+  const slaVencido = sla && sla < hojeSemHora();
+  if(!sla || slaVencido){
+    const previsao = somaDiasUteis(chegadaBase, 2);
+    return { previsao, origem: slaVencido ? `SLA vencido (${fmtDate(sla)}) — nova previsão: chegada na base (${fmtDate(chegadaBase)}) + 2 dias úteis` : `Sem SLA vigente — chegada na base (${fmtDate(chegadaBase)}) + 2 dias úteis`, semPrevisao:false, tratativaExtra: slaVencido ? [`SLA vencido em ${fmtDate(sla)} — previsão recalculada.`] : [] };
+  }
+  return { previsao: sla, origem:`SLA vigente (${fmtDate(sla)}) — dentro do prazo, tempo de transferência validado (${ttTexto || "D+2 padrão"})`, semPrevisao:false, tratativaExtra:[] };
+};
+
+// Lê a previsão de entrega informada diretamente pelo rastreamento dos Correios
+// (nomes de coluna candidatos — ajustar conforme nomenclatura real da base).
+function previsaoCorreios(hawb){
+  const raw = hawb["CORREIOS - PREVISAO"] || hawb["CORREIOS - DATA PREVISTA"] ||
+              hawb["CORREIOS - PREVISAO DE ENTREGA"] || hawb["CORREIOS - DATA PREVISAO"];
+  const d = toDate(raw);
+  if(!d) return { previsao:null, valida:false };
+  const p = new Date(d.getTime()); p.setHours(0,0,0,0);
+  return { previsao:d, valida: p >= hojeSemHora() };
+}
+
+// Redespacho pelos Correios / Envio Protocolado para Terceiro: NÃO informar
+// previsão de entrega própria. Validar se existe previsão no rastreamento dos
+// Correios — se houver e for futura, informar essa previsão; se estiver vencida
+// ou não existir, informar que será aberto chamado junto aos Correios (sem gerar
+// nova previsão).
+function regraRedespachoOuProtocoloTerceiro(hawb, contexto){
+  const cp = previsaoCorreios(hawb);
+  const tratativaExtra = [];
+  if(contexto === "REDESPACHO"){
+    const dataMov = toDate(hawb["DATA ULTIMO STATUS"]);
+    const prazoLimite = dataMov ? somaDiasUteis(dataMov, 2) : null;
+    const recebidoEm48h = dataMov && prazoLimite && hojeSemHora() <= prazoLimite;
+    if(!recebidoEm48h) tratativaExtra.push("Sem recebimento do objeto em até 48 horas úteis após redespacho — ACIONAR time de Correios.");
+    const camposEndereco = validarEnderecoCampos(hawb);
+    tratativaExtra.push(`Validar endereço contra base pública dos Correios: ${camposEndereco.join(", ") || "campos de endereço não preenchidos na base"}.`);
+  }
+  if(cp.valida){
+    return { previsao: cp.previsao, origem:`Previsão informada pelo rastreamento dos Correios (${fmtDate(cp.previsao)})`, semPrevisao:false,
+             respostaExtra:`Prezado(a), de acordo com o rastreamento dos Correios, a previsão de entrega é ${fmtDate(cp.previsao)}.`,
+             tratativaExtra, correiosPrevisaoValida:true };
+  }
+  tratativaExtra.push(cp.previsao
+    ? `Previsão dos Correios (${fmtDate(cp.previsao)}) está vencida — abrir chamado junto aos Correios para verificação, sem gerar nova previsão.`
+    : "Sem previsão registrada no rastreamento dos Correios — abrir chamado junto aos Correios para verificação, sem gerar nova previsão.");
+  return { previsao:null, origem:"Sem previsão válida nos Correios — chamado será aberto junto aos Correios, sem nova previsão", semPrevisao:true,
+           respostaExtra:"Prezado(a), seu documento está em posse dos Correios. Será aberto um chamado junto aos Correios para verificação da situação atual.",
+           tratativaExtra };
+}
+
+STATUS_RULES["REDESPACHADO POR TERCEIRO"] = (hawb) => regraRedespachoOuProtocoloTerceiro(hawb, "REDESPACHO");
+
+STATUS_RULES["OBJETO RECEBIDO"] = (hawb) => {
+  if(temSLA(hawb)) {
+    return { previsao: dataSLA(hawb), origem:`SLA vigente (${fmtDate(dataSLA(hawb))})`, semPrevisao:false,
+             tratativaExtra:["Base será acionada para roteirização."] };
+  }
+  const base = toDate(hawb["DATA ULTIMO STATUS"]) || hojeSemHora();
+  const previsao = somaDiasUteis(base, 2);
+  return { previsao, origem:"Sem SLA — último status + 2 dias úteis", semPrevisao:false, tratativaExtra:["Base será acionada para roteirização."] };
+};
+
+STATUS_RULES["ENTREGA EM ANDAMENTO (NA RUA)"] = (hawb) => {
+  const dataStatus = toDate(hawb["DATA ULTIMO STATUS"]);
+  const hoje = hojeSemHora();
+  const ehHoje = dataStatus && dataStatus.getFullYear()===hoje.getFullYear() && dataStatus.getMonth()===hoje.getMonth() && dataStatus.getDate()===hoje.getDate();
+  if(ehHoje){
+    return { previsao:null, origem:"Entrega em andamento na data de hoje", semPrevisao:true,
+             respostaExtra:"Prezado(a), a entrega do seu documento encontra-se em andamento nesta data. Caso ocorra alguma tentativa sem sucesso, pedimos que entre em contato novamente para novas orientações.",
+             tratativaExtra:[] };
+  }
+  return { previsao:null, origem:"Status 'Entrega em andamento' com data anterior à atual — pendente de atualização", semPrevisao:true,
+           respostaExtra:"Prezado(a), identificamos que a última atualização de tentativa de entrega está desatualizada. Nossa base foi acionada para atualização imediata do status.",
+           tratativaExtra:["Status 'Entrega em Andamento (Na Rua)' com data anterior à atual — SINALIZAR base para atualização."] };
+};
+
+function regraEntregaNaoEfetuada(hawb, ticket){
+  const motivo = norm(hawb["MOTIVO"] || ticket["MOTIVO"]);
+  const tratativaExtra = [`Motivo do insucesso: ${motivo || "não informado"} — validar detalhamento.`];
+  const enderecoRelacionado = /ENDER|CEP|NUMERO|LOGRADOURO|NAO LOCALIZADO/.test(motivo);
+  if(enderecoRelacionado){
+    const camposEndereco = validarEnderecoCampos(hawb);
+    tratativaExtra.push(`Insucesso relacionado a endereço — validar: ${camposEndereco.join(", ") || "campos de endereço"}.`);
+    tratativaExtra.push("Solicitar telefone atualizado do destinatário.");
+  }
+  return { previsao:null, origem:null, semPrevisao:false, tratativaExtra };
+}
+STATUS_RULES["ENTREGA NAO EFETUADA"] = regraEntregaNaoEfetuada;
+STATUS_RULES["ENTREGA NAO EFETUADA (RT)"] = regraEntregaNaoEfetuada;
+
+STATUS_RULES["AGUARDANDO RETIRADA"] = (hawb) => {
+  const dataStatus = toDate(hawb["DATA ULTIMO STATUS"]);
+  const prazoExpira = dataStatus ? somaDiasUteis(dataStatus, 7) : null;
+  const expirado = prazoExpira && hojeSemHora() > prazoExpira;
+  if(expirado){
+    return { previsao:null, origem:"Prazo de retirada nos Correios excedido — documento seguirá devolução", semPrevisao:true,
+             respostaExtra:"Prezado(a), o prazo de retirada nos Correios foi excedido e o documento seguirá para devolução. Após o retorno, será validada a possibilidade de custódia para reenvio.",
+             tratativaExtra:["Prazo de retirada expirado — documento em fluxo de devolução; validar custódia para reenvio após retorno."] };
+  }
+  return { previsao:null, origem:"Aguardando retirada nos Correios — dentro do prazo", semPrevisao:true,
+           respostaExtra:"Prezado(a), seu documento está disponível para retirada em unidade dos Correios, dentro do prazo vigente.",
+           tratativaExtra:[] };
+};
+
+STATUS_RULES["ENTREGUE PELO TERCEIRO"] = (hawb) => {
+  return { previsao:null, origem:"Entrega confirmada via rastreio de terceiro (Correios)", semPrevisao:true,
+           respostaExtra:"Prezado(a), informamos que a entrega foi confirmada em nosso rastreamento.",
+           tratativaExtra:["Caso o destinatário informe que não recebeu, orientar abertura de ticket para solicitação de comprovante junto aos Correios."] };
+};
+
+function regraEntregaRegistrada(hawb){
+  const tratativaExtra = [];
+  const campoAlvo = hawb["CAMPO ALVO"] || hawb["CAMPO ALVO (M)"];
+  if(campoAlvo !== undefined && campoAlvo !== null && campoAlvo !== "" && Number(campoAlvo) > 500){
+    tratativaExtra.push(`Campo Alvo ${campoAlvo}m > 500m — divergência de geolocalização, sinalizar ao cliente.`);
+  }
+  ["RECEBEDOR","DATA ULTIMO STATUS","COORDENADAS"].forEach(c => {
+    if(hawb[c] === undefined || hawb[c] === null || hawb[c] === "") tratativaExtra.push(`Campo '${c}' não preenchido na base — validar manualmente.`);
+  });
+  return { previsao:null, origem:"Entrega registrada — validação de Campo Alvo/recebedor/data/hora/coordenadas", semPrevisao:true,
+           respostaExtra:"Prezado(a), informamos que a entrega do seu documento foi registrada com sucesso.",
+           tratativaExtra: tratativaExtra.length ? tratativaExtra : ["Sem divergências identificadas nos campos de validação de entrega."] };
+}
+STATUS_RULES["ENTREGA REGISTRADA VIA RT"] = regraEntregaRegistrada;
+STATUS_RULES["ENTREGA REGISTRADA"] = regraEntregaRegistrada;
+STATUS_RULES["COMPROVANTE REGISTRADO"] = regraEntregaRegistrada;
+
+STATUS_RULES["DEVOLVENDO VIA TERCEIRO"] = (hawb) => {
+  return { previsao:null, origem:"Devolução em andamento via terceiro (Correios) — prazo médio 15 a 20 dias úteis", semPrevisao:true,
+           respostaExtra:"Prezado(a), seu documento está em processo de devolução pelos Correios, com prazo médio de 15 a 20 dias úteis. Após o recebimento, será avaliada a possibilidade de custódia para novo envio, quando permitido pelo fluxo.",
+           tratativaExtra:["Após recebimento da devolução, solicitar custódia para novo envio quando permitido pelo fluxo do cliente."] };
+};
+
+STATUS_RULES["DEVOL. PROTOCOLADA - FRANQUIA"] = (hawb, ticket, idx) => {
+  const franquia = norm(hawb["FRANQUIA ATUAL"]);
+  const motivo = norm(hawb["MOTIVO"]);
+  const dev = idx.devolucaoPorFranquia.get(franquia);
+  const tratativaExtra = [`Motivo do insucesso: ${motivo || "não informado"}.`];
+  let previsao = null, origem = "Devolução protocolada na franquia — sem tempo médio mapeado";
+  if(dev){
+    const diasTt = parsePrazoDiasUteis(dev["TT (DEVOLUÇÃO)"]);
+    const base = toDate(hawb["DATA ULTIMO STATUS"]);
+    if(diasTt && base){ previsao = somaDiasUteis(base, diasTt); origem = `Devolução protocolada — tempo médio de devolução da franquia: ${dev["TT (DEVOLUÇÃO)"]}`; }
+  }
+  return { previsao, origem, semPrevisao:false,
+           respostaExtra: previsao ? `Prezado(a), seu documento está em processo de devolução. Previsão de conclusão do fluxo de devolução: ${fmtDate(previsao)}.` : null,
+           tratativaExtra };
+};
+
+STATUS_RULES["DEVOLUCAO HABILITADA"] = (hawb, ticket, idx) => {
+  const franquia = norm(hawb["FRANQUIA ATUAL"]);
+  const tratativaExtra = ["Documento seguirá devolução enquanto permanecer na base."];
+  if(franquia === "SAO"){
+    const fluxoCli = idx.fluxoPorCliente.get(norm(ticket["CLIENTE"]));
+    const fluxoDevolDestr = fluxoCli ? (fluxoCli["DEVOLUCAO"] || fluxoCli["DESTRUICAO"] || fluxoCli["FLUXO"]) : null;
+    tratativaExtra.push(`Franquia atual = Matriz Flash (SAO) — validar em Fluxo Clientes qual fluxo será seguido (Devolução/Destruição): ${fluxoDevolDestr || "não especificado na base, validar manualmente"}.`);
+  }
+  return { previsao:null, origem:"Devolução habilitada — documento retornará enquanto permanecer na base", semPrevisao:true,
+           respostaExtra:"Prezado(a), informamos que o documento seguirá em processo de devolução enquanto permanecer em nossa base.",
+           tratativaExtra };
+};
+
+STATUS_RULES["AGUARDANDO TELEMARKETING"] = (hawb) => {
+  const motivo = norm(hawb["MOTIVO"]);
+  return { previsao:null, origem:"Aguardando Telemarketing — responsabilidade do cliente resolver via Pegasus", semPrevisao:true,
+           respostaExtra:"Prezado(a), identificamos a necessidade de correção do endereço e/ou confirmação dos dados cadastrais para prosseguir com uma nova tentativa de entrega.",
+           tratativaExtra:[`Motivo do insucesso: ${motivo || "não informado"}. SOLICITAR correção de endereço e confirmação dos dados ao cliente/cooperativa via Pegasus. Após validação, seguir com nova tentativa.`] };
+};
+
+function regraSinistroExtravio(){
+  return { previsao:null, origem:"Sinistro/Extravio — documento cancelado, sem previsão de entrega", semPrevisao:true,
+           respostaExtra:"Prezado(a), informamos que houve o cancelamento do documento em decorrência de sinistro/extravio.",
+           tratativaExtra:["Sinistro/Extravio confirmado — documento cancelado. Orientar emissão de nova via/novo pedido, se aplicável."] };
+}
+STATUS_RULES["SINISTRO - CLIENTE AVISADO"] = regraSinistroExtravio;
+STATUS_RULES["SINISTRO"] = regraSinistroExtravio;
+STATUS_RULES["EXTRAVIO"] = regraSinistroExtravio;
+
+// Correios PI (Pedido de Informação): chamado aberto junto aos Correios,
+// previsão de finalização de até 5 dias úteis, podendo ser prorrogado.
+STATUS_RULES["CORREIOS PI"] = (hawb) => {
+  const base = toDate(hawb["DATA ULTIMO STATUS"]) || hojeSemHora();
+  const previsao = somaDiasUteis(base, PI_PRAZO_DIAS_UTEIS);
+  return { previsao, origem:"Correios PI — chamado aberto, previsão de finalização até 5 dias úteis (prorrogável)", semPrevisao:false,
+           respostaExtra:`Prezado(a), informamos que foi aberto um chamado junto aos Correios (Pedido de Informação). A previsão de finalização é de até ${fmtDate(previsao)} (5 dias úteis), podendo esse prazo ser prorrogado conforme tratativa dos Correios.`,
+           tratativaExtra:["Correios PI — chamado aberto; acompanhar prazo de resposta dos Correios (pode ser prorrogado)."] };
+};
+
+STATUS_RULES["HABILITADO PARA REENVIO"] = (hawb, ticket) => {
+  const cepAtual = normCep(hawb["CEP DE DESTINO"]);
+  const enderecoComentario = montarEnderecoDoComentario(ticket["PRIMEIRO COMENTARIO"]);
+  const cepMudou = enderecoComentario && /\d{5}-?\d{3}/.test(enderecoComentario) &&
+                    normCep(enderecoComentario.match(/\d{5}-?\d{3}/)[0]) !== cepAtual;
+  if(cepMudou){
+    return { previsao:null, origem:"Habilitado para reenvio — CEP alterado, possível devolução para nova base responsável", semPrevisao:true,
+             respostaExtra:"Prezado(a), identificamos alteração no CEP de destino. Poderá ocorrer devolução para posterior envio à nova base responsável.",
+             tratativaExtra:["CEP alterado pelo cliente — validar nova base responsável antes do reenvio."] };
+  }
+  const base = toDate(hawb["DATA ULTIMO STATUS"]) || hojeSemHora();
+  const previsao = somaDiasUteis(base, 2);
+  return { previsao, origem:"Habilitado para reenvio — CEP não alterado, nova tentativa em até 2 dias úteis", semPrevisao:false,
+           respostaExtra:`Prezado(a), seu documento está habilitado para reenvio. A nova tentativa de entrega deverá ocorrer em até ${fmtDate(previsao)}.`,
+           tratativaExtra:[] };
+};
+
+STATUS_RULES["PROTOCOLADO PARA DESTRUICAO"] = () => ({
+  previsao:null, origem:"Documento destruído conforme fluxo operacional", semPrevisao:true,
+  respostaExtra:"Prezado(a), informamos que o documento foi destruído conforme fluxo operacional vigente. Caso necessário, poderá ser solicitada uma nova via.",
+  tratativaExtra:[]
+});
+
+STATUS_RULES["HAWB CANCELADA - SEM FISICO"] = () => ({
+  previsao:null, origem:"HAWB cancelada — documento físico não localizado", semPrevisao:true,
+  respostaExtra:"Prezado(a), informamos que o documento físico não foi localizado e a HAWB foi cancelada. Caso necessário, poderá ser solicitada uma nova via.",
+  tratativaExtra:[]
+});
+
+STATUS_RULES["IMPORTACAO - PENDENCIA GERADA"] = (hawb) => {
+  const campos = validarEnderecoCampos(hawb);
+  return { previsao:null, origem:"Pendência de importação impede prosseguimento da operação", semPrevisao:true,
+           respostaExtra:"Prezado(a), identificamos uma pendência que impede o prosseguimento da operação. Solicitamos a confirmação/correção dos dados de endereço.",
+           tratativaExtra:[`Validar divergência nos campos: ${campos.join(", ") || "campos de endereço não preenchidos"}.`] };
+};
+
+function regraHub(hawb, ticket, idx){
+  const franquia = norm(hawb["FRANQUIA ATUAL"]);
+  const produto = norm(hawb["PRODUTO"]);
+  const cidade = norm(hawb["CIDADE"]);
+  const rota = idx.envioSecundarioPorCidade.get(cidade) || idx.envioPrimarioPorFranquiaProduto.get(franquia+"|"+produto);
+  const ttTexto = rota ? (rota["TRANSIT-TIME"] || rota["TRANSIT-TIME PARCEIRO"]) : null;
+  const diasTt = parsePrazoDiasUteis(ttTexto) || 2;
+  const base = toDate(hawb["DATA ULTIMO STATUS"]) || hojeSemHora();
+  const previsao = somaDiasUteis(base, diasTt);
+  return { previsao, origem:`Documento em transferência — tempo de trânsito ${ttTexto || "D+2 padrão"} até a base de destino`, semPrevisao:false,
+           respostaExtra:`Prezado(a), seu documento está em transferência entre bases. Previsão de chegada na base de destino: ${fmtDate(previsao)}.`,
+           tratativaExtra:[] };
+}
+STATUS_RULES["RECEPCIONADO NO HUB"] = regraHub;
+STATUS_RULES["EM VIAGEM - HUB"] = regraHub;
+
+// Objeto Recebido - Recuperado: apenas informativo, SEM previsão de entrega —
+// o documento seguiu para base diferente da prevista e será devolvido para
+// seguir à base correta.
+STATUS_RULES["OBJETO RECEBIDO - RECUPERADO"] = () => ({
+  previsao:null, origem:"Objeto recebido em base diferente da prevista — será devolvido para seguir à base correta (sem previsão de entrega)", semPrevisao:true,
+  respostaExtra:"Prezado(a), identificamos que seu documento seguiu para uma base diferente da prevista. Será realizada a devolução para que o documento siga corretamente à base responsável.",
+  tratativaExtra:["Objeto recebido em base incorreta — acionar devolução para a base correta."]
+});
+
+// Envio Protocolado para Terceiro: início do fluxo pelos Correios — nunca informar previsão.
+STATUS_RULES["ENVIO PROTOCOLADO PARA TERCEIRO"] = (hawb) => regraRedespachoOuProtocoloTerceiro(hawb, "PROTOCOLO");
+
+// Objeto Retirado da Custódia: se o último status ocorreu há até 15 dias, informar
+// que a base/time operacional será acionado para localização. Sem previsão.
+STATUS_RULES["OBJETO RETIRADO DA CUSTODIA"] = (hawb) => {
+  const dataStatus = toDate(hawb["DATA ULTIMO STATUS"]);
+  const dentro15dias = dataStatus && ((hojeSemHora() - dataStatus) / 86400000) <= 15;
+  const tratativaExtra = dentro15dias ? ["Objeto retirado da custódia há até 15 dias — ACIONAR base/time operacional para localização do documento."]
+                                       : ["Objeto retirado da custódia há mais de 15 dias — validar manualmente, fora do prazo padrão de localização."];
+  return { previsao:null, origem:"Objeto retirado da custódia — sem previsão de entrega", semPrevisao:true,
+           respostaExtra: dentro15dias
+             ? "Prezado(a), seu documento consta como retirado da custódia. Nossa base/time operacional será acionado para localização."
+             : "Prezado(a), seu documento consta como retirado da custódia. Estamos validando internamente a situação atual.",
+           tratativaExtra };
+};
+
+/* Ciclo Operacional Encerrado — sempre validar o Tipo de Baixa:
+   - Reenvio: já tratado globalmente por resolverHawbReenvio (redireciona para a
+     nova HAWB antes mesmo de chegar aqui), então esta regra só é alcançada
+     quando o Tipo de Baixa NÃO é Reenvio.
+   - Devolução: documento segue conforme fluxo do cliente, sem previsão.
+   - Entregue: informar apenas confirmação da entrega, sem previsão.
+   - Devolução Recebida / Devolução Avulsa: documento segue fluxo do cliente
+     (custódia, devolução ao cliente ou destruição), sem previsão. */
+STATUS_RULES["CICLO OPERACIONAL ENCERRADO"] = (hawb) => {
+  const tipoBaixa = norm(hawb["TIPO DE BAIXA"]) + " " + norm(hawb["TIPO DE BAIXA DESCRICAO"]);
+  if(tipoBaixa.includes("DEVOLUCAO RECEBIDA") || tipoBaixa.includes("DEVOLUCAO AVULSA")){
+    return { previsao:null, origem:"Ciclo encerrado — Devolução Recebida/Avulsa — segue fluxo do cliente, sem previsão", semPrevisao:true,
+             respostaExtra:"Prezado(a), informamos que o documento seguirá conforme o fluxo definido junto ao seu contrato, podendo envolver custódia, devolução ou destruição.",
+             tratativaExtra:["Devolução Recebida/Avulsa — validar em Fluxo Clientes qual tratamento se aplica: custódia, devolução ao cliente ou destruição."] };
+  }
+  if(tipoBaixa.includes("DEVOLU")){
+    return { previsao:null, origem:"Ciclo encerrado — Devolução — segue fluxo do cliente, sem previsão", semPrevisao:true,
+             respostaExtra:"Prezado(a), informamos que o documento seguirá conforme o fluxo operacional definido para o seu contrato.",
+             tratativaExtra:["Ciclo operacional encerrado por devolução — validar fluxo do cliente."] };
+  }
+  if(tipoBaixa.includes("ENTREG")){
+    return { previsao:null, origem:"Ciclo encerrado — Entregue — apenas confirmação da entrega, sem previsão", semPrevisao:true,
+             respostaExtra:"Prezado(a), informamos que a entrega do seu documento foi confirmada.",
+             tratativaExtra:[] };
+  }
+  return { previsao:null, origem:"Ciclo operacional encerrado — sem previsão de entrega", semPrevisao:true,
+           respostaExtra:"Prezado(a), o ciclo operacional deste documento está encerrado. Validando o fluxo aplicável ao seu contrato.",
+           tratativaExtra:[`Ciclo operacional encerrado com Tipo de Baixa não mapeado ('${norm(hawb["TIPO DE BAIXA"]) || "não informado"}') — validar manualmente.`] };
+};
+const FERIADOS_2026 = new Set(["2026-01-01","2026-02-16","2026-02-17","2026-04-03","2026-04-21","2026-05-01","2026-06-04","2026-09-07","2026-10-12","2026-11-02","2026-11-15","2026-12-25"]);
+const RODAPE_PADRAO = "Solicitamos que acompanhe as movimentações do seu documento diretamente pelo sistema.\n\nCaso seja identificada alguma divergência nas informações prestadas ou na finalização da entrega, pedimos que um novo ticket seja aberto para que a ocorrência seja reavaliada.\n\nAtenciosamente.";
+
+const norm = v => (v===null||v===undefined) ? "" : String(v).trim().toUpperCase();
+const normCep = v => { if(!v) return ""; const d = String(v).replace(/\D/g,""); return (d+"00000000").slice(0,8); };
+
+function toDate(v){
+  if(v===null||v===undefined||v==="") return null;
+  if(v instanceof Date) return v;
+  if(typeof v === "number"){ // serial excel
+    const d = XLSX.SSF.parse_date_code(v);
+    if(d) return new Date(d.y, d.m-1, d.d, d.H||0, d.M||0, d.S||0);
+  }
+  const s = String(v);
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1]);
+  return null;
+}
+function fmtDate(d){ if(!d) return ""; const p=n=>String(n).padStart(2,"0"); return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}`; }
+function isoDay(d){ const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function isDiaUtil(d){ const wd=d.getDay(); if(wd===0||wd===6) return false; if(FERIADOS_2026.has(isoDay(d))) return false; return true; }
+function somaDiasUteis(base, dias){
+  if(!base) return null;
+  let d = new Date(base.getTime()); let passos = 0;
+  while(passos < dias){ d.setDate(d.getDate()+1); if(isDiaUtil(d)) passos++; }
+  return d;
+}
+function parsePrazoDiasUteis(texto){
+  if(!texto) return null;
+  const t = norm(texto);
+  let m = t.match(/D\+(\d+)/); if(m) return parseInt(m[1]);
+  m = t.match(/(\d+)\s*DIAS/); if(m) return parseInt(m[1]);
+  return null;
+}
+
+/* ---------- leitura de planilha ---------- */
+function sheetToObjects(ws){
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  if(!rows.length) return [];
+  const header = rows[0].map(h => h ? norm(h) : "");
+  const out = [];
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i];
+    if(r.every(c => c===null || c==="")) continue;
+    const obj = {};
+    header.forEach((h,idx)=>{ if(h) obj[h]=r[idx]; });
+    out.push(obj);
+  }
+  return out;
+}
+
+function carregarBases(wb){
+  const need = ["Tickets","Hawbs atualizadas","Status","Fluxo Clientes","Base descredenciadas","Devolução","Envio Primario","Envio secundario","Regras Especiais","Produtos"];
+  const faltando = need.filter(n => !wb.Sheets[n]);
+  if(faltando.length) throw new Error("Abas faltando no arquivo: " + faltando.join(", "));
+  return {
+    tickets: sheetToObjects(wb.Sheets["Tickets"]),
+    hawbs: sheetToObjects(wb.Sheets["Hawbs atualizadas"]),
+    status: sheetToObjects(wb.Sheets["Status"]),
+    fluxoClientes: sheetToObjects(wb.Sheets["Fluxo Clientes"]),
+    descredenciadas: sheetToObjects(wb.Sheets["Base descredenciadas"]),
+    devolucao: sheetToObjects(wb.Sheets["Devolução"]),
+    envioPrimario: sheetToObjects(wb.Sheets["Envio Primario"]),
+    envioSecundario: sheetToObjects(wb.Sheets["Envio secundario"]),
+    regrasEspeciais: sheetToObjects(wb.Sheets["Regras Especiais"]).map(r=>norm(Object.values(r)[0])),
+    produtos: sheetToObjects(wb.Sheets["Produtos"]),
+  };
+}
+
+function construirIndices(bases){
+  const idx = {};
+  idx.hawbPorAr = new Map();
+  bases.hawbs.forEach(h => { const ar = norm(h["AR"]); if(ar) idx.hawbPorAr.set(ar,h); });
+  idx.hawbPorCodigo = new Map();
+  bases.hawbs.forEach(h => { const c = norm(h["CODIGO DO HAWB"]); if(c) idx.hawbPorCodigo.set(c,h); });
+  idx.fluxoPorCliente = new Map();
+  bases.fluxoClientes.forEach(f => { const c = norm(f["CLIENTE"]); if(c) idx.fluxoPorCliente.set(c,f); });
+  idx.descredPorFranquia = new Map();
+  bases.descredenciadas.forEach(d => {
+    const f = norm(d["FRANQUIA"]); const dt = toDate(d["DATA"]);
+    if(f && dt){ const atual = idx.descredPorFranquia.get(f); if(!atual || dt>atual) idx.descredPorFranquia.set(f,dt); }
+  });
+  idx.devolucaoPorFranquia = new Map();
+  bases.devolucao.forEach(d => { const f = norm(d["FRQ"]); if(f) idx.devolucaoPorFranquia.set(f,d); });
+  idx.envioPrimarioPorFranquiaProduto = new Map();
+  bases.envioPrimario.forEach(e => idx.envioPrimarioPorFranquiaProduto.set(norm(e["FRANQUIA"])+"|"+norm(e["PRODUTO"]), e));
+  idx.envioSecundarioPorCidade = new Map();
+  bases.envioSecundario.forEach(e => { const c = norm(e["CIDADE"]); if(c) idx.envioSecundarioPorCidade.set(c,e); });
+  idx.prazoPorProduto = new Map();
+  bases.produtos.forEach(p => { const prod = norm(p["PRODUTO"]); const dias = parsePrazoDiasUteis(p["PRAZO"]); if(prod) idx.prazoPorProduto.set(prod,dias); });
+  return idx;
+}
+
+function validarCep(cepBruto){
+  const cep = normCep(cepBruto);
+  let alerta = null;
+  if(cep.endsWith("000")) alerta = `CEP ${cep} termina em '000' — validação prioritária obrigatória contra base dos Correios.`;
+  return {cep, alerta};
+}
+
+function checarDescredenciamento(franquia, dataUltimoStatus, idx){
+  const f = norm(franquia);
+  const dataReg = idx.descredPorFranquia.get(f);
+  if(!dataReg) return null;
+  const dataEfetiva = new Date(dataReg.getTime()); dataEfetiva.setDate(dataEfetiva.getDate()-30);
+  const du = toDate(dataUltimoStatus);
+  if(!du) return `Franquia '${f}' consta na base de descredenciadas (data efetiva ${fmtDate(dataEfetiva)}). Data do último status não informada — validar manualmente.`;
+  if(du < dataEfetiva) return `[ALERTA INFORMATIVO / NÃO URGENTE] Último status (${fmtDate(du)}) é anterior à data efetiva de descredenciamento (${fmtDate(dataEfetiva)}) da franquia '${f}'.`;
+  return `[INCONSISTÊNCIA REAL / URGENTE] Último status (${fmtDate(du)}) é POSTERIOR à data efetiva de descredenciamento (${fmtDate(dataEfetiva)}) da franquia '${f}' — unidade já descredenciada processou o documento.`;
+}
+
+function hojeSemHora(){ const d = new Date(); d.setHours(0,0,0,0); return d; }
+
+// Garante que a previsão nunca seja anterior à data atual E nunca seja no mesmo dia
+// (regra do mesmo dia — a única exceção, "Entrega em Andamento (Na Rua)" na data
+// atual, é tratada à parte e nunca gera uma data de previsão, só uma mensagem
+// informativa, então nunca passa por esta função).
+function aplicarPisoHoje(previsao, inconsistencias){
+  if(!previsao) return previsao;
+  const hoje = hojeSemHora();
+  const p = new Date(previsao.getTime()); p.setHours(0,0,0,0);
+  if(p <= hoje){
+    if(p < hoje) inconsistencias.push("Previsão calculada estava no passado — ajustada para +2 dias úteis a partir de hoje.");
+    else inconsistencias.push("Previsão calculada caía no mesmo dia — ajustada para +2 dias úteis a partir de hoje (regra do mesmo dia).");
+    let ajustada = somaDiasUteis(hoje, 2);
+    return ajustada;
+  }
+  return previsao;
+}
+
+// Statuses em que NUNCA se deve informar previsão de entrega, independentemente
+// de qualquer outro cálculo (regra "Nunca informar previsão quando").
+// Exceção: "CORREIOS PI" tem regra própria (chamado aberto, previsão de até 5
+// dias úteis, prorrogável) — não entra na blindagem genérica de Correios.
+const STATUS_NUNCA_PREVISAO_SUBSTR = [
+  "CORREIO", "ENVIO PROTOCOLADO PARA TERCEIRO", "DEVOLU", "CUSTODIA",
+  "CICLO OPERACIONAL ENCERRADO", "AGUARDANDO DEVOLUCAO"
+];
+const STATUS_NUNCA_PREVISAO_EXCECOES = new Set(["CORREIOS PI", "REDESPACHADO POR TERCEIRO", "ENVIO PROTOCOLADO PARA TERCEIRO"]);
+function nuncaGerarPrevisao(statusAtual){
+  if(STATUS_NUNCA_PREVISAO_EXCECOES.has(statusAtual)) return false;
+  return STATUS_NUNCA_PREVISAO_SUBSTR.some(s => statusAtual.includes(s));
+}
+
+/* REGRA GERAL: Tipo de Baixa = "Reenvio" -> consultar obrigatoriamente a HAWB de
+   Ligação, identificar a nova HAWB, e usar EXCLUSIVAMENTE essa nova HAWB para toda
+   a análise (status + previsão). Desconsiderar a análise/previsão da HAWB anterior.
+   Vale independentemente do "Último Status" da HAWB original. Compartilhada entre
+   gerarAnaliseTicket (status/CEP/telemarketing/resposta) e calcularPrevisao. */
+function resolverHawbReenvio(hawb, idx){
+  let hawbAtual = hawb;
+  let prefixo = "";
+  const notas = [];
+  let voltas = 0;
+  while(voltas < 5){
+    const tipoBaixaDesc = norm(hawbAtual["TIPO DE BAIXA DESCRICAO"]) + " " + norm(hawbAtual["TIPO DE BAIXA"]);
+    if(!tipoBaixaDesc.includes("REENVIO")) break;
+    const hawbLigCod = norm(hawbAtual["HAWB LIGACAO"]);
+    if(!hawbLigCod){ notas.push("Tipo de Baixa \"Reenvio\", mas coluna 'HAWB de Ligação' está vazia."); break; }
+    const nova = idx.hawbPorCodigo.get(hawbLigCod);
+    if(!nova){ notas.push(`Tipo de Baixa "Reenvio", mas HAWB de Ligação '${hawbLigCod}' não localizada em Hawbs atualizadas.`); break; }
+    notas.push(`Tipo de Baixa "Reenvio" — análise realizada exclusivamente com a nova HAWB de reenvio ${hawbLigCod} (previsão da HAWB anterior desconsiderada).`);
+    hawbAtual = nova;
+    prefixo = `[Reenvio -> HAWB ${hawbLigCod}] `;
+    voltas++;
+  }
+  return {hawb: hawbAtual, prefixo, notas};
+}
+
+function calcularPrevisao(hawbAtual, cliente, idx, bases, ticket, prefixoOrigem, tratativaExtra){
+  const inconsistencias = [];
+  tratativaExtra = tratativaExtra || [];
+  if(!hawbAtual) return {previsao:null, origem:"SEM HAWB VINCULADA — verificar coleta pendente", inconsistencias, tratativaExtra};
+
+  const statusAtual = norm(hawbAtual["ULTIMO STATUS"]);
+  const produto = norm(hawbAtual["PRODUTO"]);
+  const franquia = norm(hawbAtual["FRANQUIA ATUAL"]);
+  const prazoProdutoDias = idx.prazoPorProduto.get(produto);
+
+  // Regra específica por "Último Status" (documento "Regras de Análise dos Últimos Status")
+  const regra = STATUS_RULES[statusAtual];
+  if(regra){
+    const r = regra(hawbAtual, ticket || {}, idx, bases);
+    if(r){
+      if(r.tratativaExtra && r.tratativaExtra.length) tratativaExtra.push(...r.tratativaExtra);
+      let previsao = r.previsao;
+      // Blindagem: statuses da lista "nunca informar previsão" nunca recebem data,
+      // mesmo que a regra específica do status tenha calculado uma por engano.
+      if(previsao && nuncaGerarPrevisao(statusAtual)){
+        previsao = null;
+        tratativaExtra.push(`Status '${statusAtual}' está na lista de "nunca informar previsão" — previsão calculada pela regra específica foi descartada.`);
+      }
+      if(previsao) previsao = aplicarPisoHoje(previsao, inconsistencias);
+      return {
+        previsao,
+        origem: `${prefixoOrigem}${r.origem || statusAtual}`,
+        inconsistencias, tratativaExtra,
+        respostaExtra: r.respostaExtra || null,
+        semPrevisao: !!r.semPrevisao || !previsao,
+        correios: /CORREIO/.test(statusAtual) && !!r.semPrevisao
+      };
+    }
+  }
+
+  // Envios em posse dos Correios (statuses não mapeados explicitamente acima):
+  // NUNCA informar previsão de entrega — apenas a situação atual do rastreamento.
+  if(statusAtual.includes("CORREIO") || produto === "FLASH CORREIOS"){
+    const correiosDescricao = hawbAtual["CORREIOS - DESCRICAO"];
+    const correiosData = toDate(hawbAtual["CORREIOS - DATA STATUS"]);
+    const situacao = correiosDescricao
+      ? `${correiosDescricao}${correiosData ? " em " + fmtDate(correiosData) : ""}`
+      : statusAtual;
+    return {previsao:null, origem:`${prefixoOrigem}EM POSSE DOS CORREIOS — não gerar previsão. Situação atual do rastreamento: ${situacao}`, inconsistencias, tratativaExtra, correios:true};
+  }
+
+  if(STATUS_EXCLUI_PREVISAO.has(statusAtual)) return {previsao:null, origem:`${prefixoOrigem}EXCLUÍDO — status atual '${statusAtual}' não gera previsão`, inconsistencias, tratativaExtra};
+
+  // Blindagem geral (statuses sem regra específica cadastrada, mas presentes na
+  // lista "nunca informar previsão": Devolução, Devolução Recebida/Avulsa,
+  // Custódia, Ciclo Operacional Encerrado, Envio Protocolado para Terceiro,
+  // Objeto Aguardando Devolução).
+  if(nuncaGerarPrevisao(statusAtual)){
+    return {previsao:null, origem:`${prefixoOrigem}Status '${statusAtual}' está na lista "nunca informar previsão" — sem previsão de entrega`, inconsistencias, tratativaExtra, semPrevisao:true};
+  }
+
+  // 2) Transferência / Trânsito
+  const campoTransfer = hawbAtual["TRANSFER"];
+  if(STATUS_TRANSFERENCIA.has(statusAtual) || (campoTransfer !== null && campoTransfer !== "" && campoTransfer !== 0)){
+    const cidade = norm(hawbAtual["CIDADE"]);
+    const rota = idx.envioSecundarioPorCidade.get(cidade) || idx.envioPrimarioPorFranquiaProduto.get(franquia+"|"+produto);
+    let previsao, origem;
+    if(rota){
+      const ttTexto = rota["TRANSIT-TIME"] || rota["TRANSIT-TIME PARCEIRO"];
+      const diasTt = parsePrazoDiasUteis(ttTexto);
+      const baseData = toDate(hawbAtual["DATA MOVIMENTO"]) || toDate(hawbAtual["DATA ULTIMO STATUS"]);
+      if(diasTt && baseData){
+        previsao = somaDiasUteis(baseData, diasTt);
+        origem = `${prefixoOrigem}Transferência/Trânsito — TT ${ttTexto} a partir de ${fmtDate(baseData)}`;
+      }
+    }
+    if(!previsao){
+      inconsistencias.push("Documento em transferência mas rota não mapeada em Envio Primário/Secundário — aplicado TT conservador D+2, validar manualmente.");
+      const baseData = toDate(hawbAtual["DATA ULTIMO STATUS"]) || new Date();
+      previsao = somaDiasUteis(baseData, 2);
+      origem = `${prefixoOrigem}Transferência (rota não mapeada, TT conservador D+2)`;
+    }
+    previsao = aplicarPisoHoje(previsao, inconsistencias);
+    return {previsao, origem, inconsistencias, tratativaExtra};
+  }
+
+  // 4) Último status operacional
+  const evento = bases.status.find(s => norm(s["EVENTO"]) === statusAtual);
+  if(evento){
+    const diasEvento = parsePrazoDiasUteis(evento["TEMPO"]);
+    const baseData = toDate(hawbAtual["DATA ULTIMO STATUS"]);
+    if(diasEvento && baseData){
+      let previsao = somaDiasUteis(baseData, diasEvento);
+      previsao = aplicarPisoHoje(previsao, inconsistencias);
+      return {previsao, origem:`${prefixoOrigem}Último Status Operacional (${statusAtual}) — ${evento["TEMPO"]}`, inconsistencias, tratativaExtra};
+    }
+  }
+
+  // 5) SLA do Cliente
+  const fluxoCli = idx.fluxoPorCliente.get(norm(cliente));
+  if(fluxoCli){
+    const diasCliente = parsePrazoDiasUteis(fluxoCli["PRAZOS"]);
+    const baseData = toDate(hawbAtual["DATA POSTAGEM"]) || toDate(hawbAtual["DATA ULTIMO STATUS"]);
+    if(diasCliente && baseData){
+      let previsao = somaDiasUteis(baseData, diasCliente);
+      let origem = `${prefixoOrigem}SLA do Cliente (${fluxoCli["PRAZOS"]})`;
+      if(prazoProdutoDias && diasCliente && prazoProdutoDias !== diasCliente){
+        inconsistencias.push(`Divergência entre SLA do produto '${produto}' (${prazoProdutoDias} du) e SLA do cliente aplicado (${diasCliente} du) — priorizado o SLA mais específico (produto).`);
+        previsao = somaDiasUteis(baseData, prazoProdutoDias);
+        origem = `${prefixoOrigem}SLA do Produto '${produto}' (${prazoProdutoDias} du) — sobrepôs SLA genérico do cliente`;
+      }
+      previsao = aplicarPisoHoje(previsao, inconsistencias);
+      return {previsao, origem, inconsistencias, tratativaExtra};
+    }
+  }
+
+  return {previsao:null, origem:`${prefixoOrigem}NENHUMA FONTE DE PREVISÃO ENCONTRADA — sinalizar ao analista`, inconsistencias, tratativaExtra};
+}
+
+function montarEnderecoDoComentario(texto){
+  if(!texto) return null;
+  const m = String(texto).match(/Endere[cç]o[^:]*:\s*(.+)/i);
+  return m ? m[1].trim() : null;
+}
+
+function gerarAnaliseTicket(ticket, idx, bases){
+  const cliente = norm(ticket["CLIENTE"]);
+  const matriz = MATRIZ_INSTITUCIONAL[cliente] || "Matriz Flash";
+  const arOriginal = norm(ticket["AR ORIGINAL"]);
+  const hawb = idx.hawbPorAr.get(arOriginal);
+  const primeiroComentario = ticket["PRIMEIRO COMENTARIO"] || "";
+
+  const respostaPartes = [];
+  const tratativaPartes = [];
+  const diagnostico = [];
+
+  // Nota: a coluna "Primeiro Comentário" é exportada separadamente na saída (ao
+  // lado de "Diagnóstico"); a resposta ao cliente NÃO recapitula o relato — deve
+  // ser objetiva, trazendo apenas o resultado da análise.
+
+  if(!hawb){
+    if(cliente === "FLIX MOVEL"){
+      respostaPartes.push(`Prezado(a), informamos que a coleta do seu chip está sendo processada em nossa ${matriz} e ainda aguarda confirmação de postagem.`);
+      tratativaPartes.push("Ticket sem HAWB localizada em 'Hawbs atualizadas' — típico de chip ainda não coletado (status NAO COLETADO). Não gerar previsão de entrega. Confirmar número de coleta (não mencionar a gráfica/franquia ao cliente).");
+    } else {
+      respostaPartes.push(`Prezado(a), não localizamos ainda o registro de movimentação do seu documento em nossa ${matriz}. Estamos verificando internamente e retornaremos assim que houver atualização.`);
+      tratativaPartes.push("HAWB não localizada em Hawbs atualizadas via AR Original — validar manualmente.");
+    }
+    respostaPartes.push(RODAPE_PADRAO);
+    return {resposta: respostaPartes.join("\n\n"), tratativa: tratativaPartes.join(" | "), diagnostico:"SEM HAWB / COLETA PENDENTE", previsao:"", origemPrevisao:"", statusAtual:"", primeiroComentario};
+  }
+
+  // Tipo de Baixa = Reenvio -> toda a análise passa a usar a nova HAWB de reenvio.
+  const resolvido = resolverHawbReenvio(hawb, idx);
+  const hawbAtiva = resolvido.hawb;
+  tratativaPartes.push(...resolvido.notas);
+
+  const statusAtual = norm(hawbAtiva["ULTIMO STATUS"]);
+  const franquiaAtual = norm(hawbAtiva["FRANQUIA ATUAL"]);
+  const produto = norm(hawbAtiva["PRODUTO"]);
+
+  if(!idx.fluxoPorCliente.get(cliente)) diagnostico.push(`Cliente '${cliente}' sem fluxo cadastrado em 'Fluxo Clientes' — inconsistência operacional.`);
+
+  const alertaDescred = checarDescredenciamento(franquiaAtual, hawbAtiva["DATA ULTIMO STATUS"], idx);
+  if(alertaDescred){ tratativaPartes.push(alertaDescred); if(alertaDescred.includes("URGENTE")) diagnostico.push("Franquia descredenciada processou documento após data efetiva."); }
+
+  const {alerta:alertaCep} = validarCep(hawbAtiva["CEP DE DESTINO"]);
+  if(alertaCep){ tratativaPartes.push(alertaCep); diagnostico.push("Erro de endereço (possível)"); }
+
+  // "Aguardando Telemarketing" é sempre responsabilidade do cliente resolver via Pegasus,
+  // independentemente de haver ou não pedido de alteração de endereço no comentário.
+  if(STATUS_CUSTODIA_RESP_CLIENTE.has(statusAtual)){
+    tratativaPartes.push("Status 'Aguardando Telemarketing' — SOLICITAR TRATATIVA DO CLIENTE (responsabilidade do cliente/cooperativa resolver via Pegasus).");
+  }
+
+  const enderecoCliente = montarEnderecoDoComentario(ticket["PRIMEIRO COMENTARIO"]);
+  if(enderecoCliente){
+    if(STATUS_CUSTODIA_RESP_CLIENTE.has(statusAtual)){
+      // já tratado acima — não permitir alteração direta neste status.
+    } else if(STATUS_PERMITE_ALTERACAO_ENDERECO.has(statusAtual)){
+      tratativaPartes.push(`Alteração de endereço PERMITIDA diretamente (status '${statusAtual}'). Endereço informado pelo cliente: ${enderecoCliente}`);
+    } else {
+      tratativaPartes.push(`Alteração de endereço NÃO permitida diretamente no status atual '${statusAtual}' (documento em trânsito). Orientar aguardar encerramento do fluxo ou solicitar reemissão.`);
+    }
+  }
+
+  const previsaoInfo = calcularPrevisao(hawbAtiva, cliente, idx, bases, ticket, resolvido.prefixo, []);
+  previsaoInfo.inconsistencias.forEach(inc => { tratativaPartes.push(inc); diagnostico.push("Divergência de SLA/previsão"); });
+  if(previsaoInfo.tratativaExtra) tratativaPartes.push(...previsaoInfo.tratativaExtra);
+  const emPosseCorreios = !!previsaoInfo.correios;
+
+  const caso = norm(ticket["CASO"]);
+  const motivo = norm(ticket["MOTIVO"]);
+  let respostaColeta = null;
+  if(statusAtual === "NAO COLETADO" || caso.includes("COLETA") || motivo.includes("COLETA")){
+    tratativaPartes.push("Solicitação de coleta identificada — SINALIZAR TRATATIVA MANUAL AO ANALISTA para agendamento (não prometer data/horário ao cliente, salvo se oficialmente registrado na base).");
+    respostaColeta = "Prezado(a), informamos que a coleta será agendada.";
+  }
+  if(motivo.includes("ALTERACAO DE PRODUTO") || motivo.includes("ALTERAÇÃO DE PRODUTO")){
+    tratativaPartes.push("Solicitação de alteração de produto — NÃO responder automaticamente; processo manual do analista.");
+  }
+  if(motivo.split(" ").includes("MF") || caso === "MF"){
+    tratativaPartes.push("Caso MF — retornar ao cliente que foi encaminhado ao operacional; processo manual do analista.");
+  }
+
+  // Solicitação administrativa: Criação de Login — time de acessos, prazo 24h úteis.
+  const solicitaLogin = caso.includes("LOGIN") || motivo.includes("LOGIN") || motivo.includes("CRIACAO DE LOGIN") || motivo.includes("CRIAÇÃO DE LOGIN");
+  if(solicitaLogin){
+    tratativaPartes.push("Solicitação administrativa: Criação de Login — ACIONAR time de acessos. Prazo de conclusão: 24 horas úteis.");
+  }
+
+  // Último Status sem movimentação: >2 dias sem atualização (exceto Transferências,
+  // Aguardando Telemarketing e Redespacho pelos Correios) -> acionar base/operacional.
+  // >30 dias sem atualização (exceto Correios, Ciclo Operacional Encerrado e Entregue)
+  // -> acionar time de prevenção + orientar solicitação de nova via.
+  const dataUltimoStatus = toDate(hawbAtiva["DATA ULTIMO STATUS"]);
+  if(dataUltimoStatus && !emPosseCorreios){
+    const diasSemMovimentacao = Math.floor((hojeSemHora() - dataUltimoStatus) / 86400000);
+    const excecao2dias = STATUS_TRANSFERENCIA.has(statusAtual) || STATUS_CUSTODIA_RESP_CLIENTE.has(statusAtual) || statusAtual.includes("REDESPACH");
+    const excecaoPrevencao = statusAtual === "CICLO OPERACIONAL ENCERRADO" || statusAtual === "ENTREGUE";
+    if(diasSemMovimentacao > 30 && !excecaoPrevencao){
+      tratativaPartes.push(`Último status sem atualização há ${diasSemMovimentacao} dias (>30) — ACIONAR time de prevenção para análise. Orientar cliente a seguir com solicitação de nova via.`);
+      diagnostico.push("Última movimentação há mais de 30 dias — investigação de prevenção.");
+    } else if(diasSemMovimentacao > 2 && !excecao2dias && !excecaoPrevencao){
+      tratativaPartes.push(`Último status sem atualização há ${diasSemMovimentacao} dias (>2) — ACIONAR base/time operacional para validação.`);
+    }
+  }
+
+  // Baixa "Entregue Flash": resposta mínima e objetiva — apenas confirmação da
+  // entrega, data da entrega e nome do recebedor registrado. Nada mais.
+  const tipoBaixaAtual = norm(hawbAtiva["TIPO DE BAIXA"]);
+  const entregueFlash = tipoBaixaAtual === "ENTREGUE FLASH" || tipoBaixaAtual.includes("ENTREGUE FLASH");
+
+  if(entregueFlash){
+    const dataEntrega = toDate(hawbAtiva["DATA ULTIMO STATUS"]);
+    const recebedor = hawbAtiva["RECEBEDOR"];
+    let msg = "Prezado(a), informamos que a entrega foi realizada";
+    if(dataEntrega) msg += ` em ${fmtDate(dataEntrega)}`;
+    if(recebedor) msg += `, recebida por ${recebedor}`;
+    msg += ".";
+    respostaPartes.push(msg);
+  } else if(previsaoInfo.respostaExtra){
+    // Resposta específica já preparada pela regra do "Último Status" (documento de regras por status).
+    respostaPartes.push(previsaoInfo.respostaExtra);
+    if(emPosseCorreios){
+      const rastreio = hawbAtiva["CODIGO DO HAWB"] || arOriginal;
+      respostaPartes.push(`Código de rastreio: ${rastreio}`);
+    }
+  } else if(respostaColeta){
+    respostaPartes.push(respostaColeta);
+  } else if(emPosseCorreios){
+    const rastreio = hawbAtiva["CODIGO DO HAWB"] || arOriginal;
+    respostaPartes.push(`Prezado(a), seu envio encontra-se atualmente em posse dos Correios. Não é possível informar uma previsão de entrega neste momento; a situação atual do rastreamento é: ${previsaoInfo.origem.replace(/^\[.*?\]\s*/,"").replace("EM POSSE DOS CORREIOS — não gerar previsão. Situação atual do rastreamento: ","")}.`);
+    respostaPartes.push(`Código de rastreio: ${rastreio}`);
+  } else if(STATUS_EXCLUI_PREVISAO.has(statusAtual)){
+    if(statusAtual === "ENTREGUE") respostaPartes.push("Prezado(a), informamos que a entrega já foi realizada com sucesso.");
+    else if(statusAtual.includes("DEVOLV")) respostaPartes.push(`Prezado(a), o documento retornou à nossa ${matriz} e não possui reenvio em andamento no momento.`);
+    else if(statusAtual === "SINISTRO") respostaPartes.push("Prezado(a), identificamos uma ocorrência de sinistro em relação a este documento. Nossa equipe especializada está avaliando o caso.");
+    else respostaPartes.push(`Prezado(a), o status atual do documento é '${statusAtual}'. Não é possível gerar nova previsão de entrega para este status.`);
+  } else if(previsaoInfo.previsao){
+    respostaPartes.push(`Prezado(a), informamos que a previsão atualizada de entrega é ${fmtDate(previsaoInfo.previsao)}, com base na movimentação mais recente registrada em nossa ${matriz}.`);
+  } else {
+    respostaPartes.push(`Prezado(a), seu documento segue em andamento em nossa ${matriz}. Ainda não temos uma nova previsão de entrega consolidada — nossa equipe está verificando e retornaremos em breve.`);
+  }
+  respostaPartes.push(RODAPE_PADRAO);
+
+  return {
+    resposta: respostaPartes.join("\n\n"),
+    tratativa: tratativaPartes.length ? tratativaPartes.join(" | ") : "Sem observações adicionais.",
+    diagnostico: diagnostico.length ? diagnostico.join("; ") : "Sem inconsistências identificadas.",
+    previsao: previsaoInfo.previsao ? fmtDate(previsaoInfo.previsao) : "",
+    origemPrevisao: previsaoInfo.origem,
+    statusAtual,
+    primeiroComentario
+  };
+}
+
+/* ---------- UI / execução ---------- */
+const dropEl = document.getElementById("drop");
+const fileInput = document.getElementById("fileInput");
+const pillRow = document.getElementById("pillRow");
+const runBtn = document.getElementById("runBtn");
+const logEl = document.getElementById("log");
+let selectedFile = null;
+
+dropEl.addEventListener("click", () => fileInput.click());
+dropEl.addEventListener("dragover", e => { e.preventDefault(); dropEl.classList.add("drag"); });
+dropEl.addEventListener("dragleave", () => dropEl.classList.remove("drag"));
+dropEl.addEventListener("drop", e => {
+  e.preventDefault(); dropEl.classList.remove("drag");
+  if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", e => { if(e.target.files.length) handleFile(e.target.files[0]); });
+
+function handleFile(f){
+  selectedFile = f;
+  pillRow.innerHTML = `<div class="file-pill ok">✓ ${f.name}</div>`;
+  runBtn.disabled = false;
+}
+
+function log(msg){
+  logEl.style.display = "block";
+  logEl.textContent += msg + "\n";
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+runBtn.addEventListener("click", async () => {
+  if(!selectedFile) return;
+  runBtn.disabled = true;
+  logEl.textContent = "";
+  log("Lendo arquivo...");
+  try {
+    const data = await selectedFile.arrayBuffer();
+    const wb = XLSX.read(data, {type:"array", cellDates:true});
+    log("Abas encontradas: " + wb.SheetNames.join(", "));
+    const bases = carregarBases(wb);
+    log(`Tickets: ${bases.tickets.length} | Hawbs atualizadas: ${bases.hawbs.length}`);
+    const idx = construirIndices(bases);
+    log("Processando tickets...");
+
+    const resultados = [];
+    let comPrevisao=0, comInconsist=0, semHawb=0;
+    bases.tickets.forEach(t => {
+      const a = gerarAnaliseTicket(t, idx, bases);
+      if(a.previsao) comPrevisao++;
+      if(a.diagnostico && !a.diagnostico.startsWith("Sem inconsistências")) comInconsist++;
+      if(a.diagnostico === "SEM HAWB / COLETA PENDENTE") semHawb++;
+      resultados.push({
+        "Ticket": t["TICKETS"], "AR Original": t["AR ORIGINAL"], "Cliente": t["CLIENTE"], "UF": t["UF"],
+        "Status Atual (Hawb)": a.statusAtual, "Previsão de Entrega": a.previsao, "Origem da Previsão": a.origemPrevisao,
+        "Diagnóstico": a.diagnostico, "Primeiro Comentário": a.primeiroComentario || "",
+        "Resposta ao Cliente": a.resposta, "Tratativa Interna (Analista)": a.tratativa
+      });
+    });
+
+    log(`Concluído: ${resultados.length} tickets processados.`);
+    mostrarResultado(resultados, {comPrevisao, comInconsist, semHawb});
+    gerarDownload(resultados);
+  } catch(err){
+    log("ERRO: " + err.message);
+    console.error(err);
+  } finally {
+    runBtn.disabled = false;
+  }
+});
+
+function mostrarResultado(resultados, stats){
+  document.getElementById("resultBox").style.display = "block";
+  document.getElementById("statTotal").textContent = resultados.length;
+  document.getElementById("statComPrevisao").textContent = stats.comPrevisao;
+  document.getElementById("statInconsist").textContent = stats.comInconsist;
+  document.getElementById("statSemHawb").textContent = stats.semHawb;
+
+  const cols = ["Ticket","AR Original","Cliente","UF","Status Atual (Hawb)","Previsão de Entrega","Diagnóstico","Primeiro Comentário","Resposta ao Cliente","Tratativa Interna (Analista)"];
+  const table = document.getElementById("resultTable");
+  table.innerHTML = "";
+  const thead = document.createElement("tr");
+  cols.forEach(c => { const th=document.createElement("th"); th.textContent=c; thead.appendChild(th); });
+  table.appendChild(thead);
+  resultados.slice(0,200).forEach(r => {
+    const tr = document.createElement("tr");
+    cols.forEach(c => {
+      const td = document.createElement("td");
+      td.textContent = r[c] || "";
+      if(c==="Resposta ao Cliente") td.className="resp";
+      if(c==="Tratativa Interna (Analista)") td.className="trat";
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+  if(resultados.length>200) log(`(exibindo 200 de ${resultados.length} linhas na tela — o arquivo baixado contém todas)`);
+}
+
+function gerarDownload(resultados){
+  const cols = ["Ticket","AR Original","Cliente","UF","Status Atual (Hawb)","Previsão de Entrega","Origem da Previsão","Diagnóstico","Primeiro Comentário","Resposta ao Cliente","Tratativa Interna (Analista)"];
+  const wsData = [cols, ...resultados.map(r => cols.map(c => r[c] || ""))];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws["!cols"] = [{wch:14},{wch:14},{wch:16},{wch:6},{wch:20},{wch:16},{wch:30},{wch:30},{wch:45},{wch:55},{wch:55}];
+  const wbOut = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbOut, ws, "Análise de Tickets");
+  const wbout = XLSX.write(wbOut, {bookType:"xlsx", type:"array"});
+  const blob = new Blob([wbout], {type:"application/octet-stream"});
+  const url = URL.createObjectURL(blob);
+  const a = document.getElementById("downloadLink");
+  a.href = url;
+  a.download = "Analise_Tickets_" + new Date().toISOString().slice(0,10) + ".xlsx";
+}
+</script>
+</body>
+</html>
