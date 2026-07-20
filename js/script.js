@@ -41,6 +41,27 @@ const FERRAMENTAS = [
     descricao: "Validação de entregas e efetividade para a conta Carrefour.",
     arquivo: "automacoes/validador-entregas-carrefour.html"
   },
+  {
+    id: "validador-pendencias",
+    nome: "Validador de Pendências",
+    icone: "⏳",
+    descricao: "Identificação e acompanhamento de pendências em aberto.",
+    arquivo: "automacoes/validador-pendencias.html"
+  },
+  {
+    id: "malha-de-transporte",
+    nome: "Busca de Malha de Transporte",
+    icone: "🚚",
+    descricao: "Consulta de malha de transporte por região/rota.",
+    arquivo: "automacoes/malha-de-transporte.html"
+  },
+  {
+    id: "entregas-dedicadas",
+    nome: "Validador de Entregas Dedicadas",
+    icone: "🎯",
+    descricao: "Validação de entregas dedicadas (fora do fluxo padrão).",
+    arquivo: "automacoes/entregas-dedicadas.html"
+  },
   // Ferramenta aguardando o arquivo .html ser enviado. Quando chegar:
   // 1. Salve o arquivo em /automacoes/validador-enderecos.html
   // 2. Remova o comentário do bloco abaixo
@@ -64,20 +85,20 @@ const CLIENTES = [
     nome: "Banco Carrefour",
     logo: "img/logo-carrefour.png",
     rotina: [
-      // {
-      //   id: "rotina-carrefour-1",
-      //   nome: "Nome da ferramenta",
-      //   icone: "📋",
-      //   descricao: "Descrição curta.",
-      //   arquivo: "clientes/banco-carrefour/arquivo.html"
-      // },
+      {
+        id: "rotina-tarefas-carrefour",
+        nome: "Rotina e Tarefas",
+        icone: "📋",
+        descricao: "Contatos, contratos, rotina operacional e informações do cliente.",
+        arquivo: "clientes/banco-carrefour/rotina-tarefas.html"
+      },
     ],
     painel: [
       {
         id: "painel-resultados-carrefour",
         nome: "Painel de Resultados",
         icone: "📊",
-        descricao: "Dashboard executivo Flash × Carrefour.",
+        descricao: "Dashboard executivo Flash × Carrefour — referente a Junho.",
         arquivo: "clientes/banco-carrefour/painel-resultados.html"
       },
     ]
@@ -100,7 +121,7 @@ const CLIENTES = [
         id: "painel-resultados-bmg",
         nome: "Painel de Resultados",
         icone: "📊",
-        descricao: "Dashboard executivo Flash × BMG.",
+        descricao: "Dashboard executivo Flash × BMG — referente a Junho.",
         arquivo: "clientes/banco-bmg/painel-resultados.html"
       },
     ]

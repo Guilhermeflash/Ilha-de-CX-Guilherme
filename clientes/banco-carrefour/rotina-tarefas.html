@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rotina e Tarefas — Banco Carrefour</title>
+<style>
+  :root{
+    --navy:#0B1E3D; --navy-2:#12294F; --orange:#FF7A1A; --orange-light:#FFB37A;
+    --paper:#F5F7FA; --white:#FFFFFF; --text-dim:#6B7A90; --border:#E3E8F0;
+    --radius:14px; --shadow-sm:0 2px 8px rgba(11,30,61,0.06); --shadow-md:0 8px 24px rgba(11,30,61,0.10);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+    background: var(--paper); color: var(--navy); padding: 28px 24px 60px;
+  }
+  .wrap{ max-width: 1100px; margin:0 auto; }
+  header{ margin-bottom: 24px; }
+  header h1{ font-size: 26px; font-weight:800; }
+  header p{ color: var(--text-dim); font-size:13.5px; margin-top:4px; }
+
+  .search-box{ position:relative; margin: 20px 0 28px; max-width:420px; }
+  .search-box input{
+    width:100%; padding:11px 16px 11px 40px; border-radius:10px; border:1px solid var(--border);
+    background: var(--white); font-size:14px;
+  }
+  .search-box input:focus{ outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,122,26,.12); }
+  .search-box svg{ position:absolute; left:13px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--text-dim); }
+
+  .stats{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom: 28px; }
+  .stat-card{
+    background: linear-gradient(145deg, var(--navy), var(--navy-2));
+    color: var(--white); border-radius: var(--radius); padding: 18px 26px;
+    min-width:160px; box-shadow: var(--shadow-md);
+  }
+  .stat-card .label{ font-size:11.5px; letter-spacing:1.5px; text-transform:uppercase; color: var(--orange-light); font-weight:700; }
+  .stat-card .value{ font-size:30px; font-weight:800; margin-top:4px; }
+
+  .section{ margin-bottom: 32px; }
+  .section-title{
+    display:flex; align-items:center; gap:10px; font-size:15px; font-weight:800;
+    margin-bottom: 14px; color: var(--navy);
+  }
+  .section-title .count{
+    font-size:11.5px; background: rgba(255,122,26,0.12); color: var(--orange);
+    padding: 2px 9px; border-radius: 20px; font-weight:700;
+  }
+
+  .item-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:12px; }
+  .item-card{
+    background: var(--white); border:1px solid var(--border); border-radius:10px;
+    padding: 14px 16px; font-size:13.5px; line-height:1.5; box-shadow: var(--shadow-sm);
+    transition: all .15s ease;
+  }
+  .item-card:hover{ border-color: var(--orange-light); transform: translateY(-2px); }
+  .item-card.email{ font-family: 'Consolas', monospace; font-size:12.5px; word-break:break-all; }
+  .pair-card{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-weight:600; }
+  .pair-sep{ color: var(--orange); font-weight:700; flex-shrink:0; }
+  .item-card .tag{
+    display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.5px;
+    color: var(--orange); background: rgba(255,122,26,0.10); border-radius:6px;
+    padding: 2px 7px; margin-bottom:6px; text-transform:uppercase;
+  }
+
+  .empty{ text-align:center; padding:40px; color:var(--text-dim); font-size:13.5px; }
+  mark{ background: rgba(255,122,26,0.35); border-radius:3px; padding:0 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Rotina e Tarefas — Banco Carrefour</h1>
+    <p>Contatos, contratos, rotina operacional e informações importantes sobre o cliente.</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat-card"><div class="label">SLA</div><div class="value">97%</div></div>
+    <div class="stat-card"><div class="label">Efetividade</div><div class="value">95%</div></div>
+  </div>
+
+  <div class="search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="text" id="searchInput" placeholder="Pesquisar em toda a rotina...">
+  </div>
+
+  <div id="sections"></div>
+</div>
+
+<script>
+const DADOS = {
+  contatos: [
+    "sandro_delmondes_moreira@carrefour.com",
+    "silvana_soares_silva_de_souza@carrefour.com",
+    "paulo_henrique_lima_salgado@carrefour.com",
+    "marcelo_pereira_varesi@carrefour.com",
+    "rodrigo_luis_roberto_junior@carrefour.com",
+    "leticia_maria_rodrigues@carrefour.com"
+  ],
+  produtos: [
+    "DOC","DOCMAIS","FLASH VERMELHO","FLASH AZUL"
+  ],
+  contratosPrincipais: [
+    ["NONATHOM01","CARREFVAL"],
+    ["NONATHOM02","CARREFMOR"],
+    ["NONAMESAM","SAOCARVAL"],
+    ["NONAJALL","CARTHOMAS"],
+    ["NONAMEATA","SAOCARMOR"],
+    ["NONAMECAR","CARJALL"],
+    ["SAOCARLOJ","SAOCARGD"],
+    ["SAOLOJATAC","SAOCARDEST"]
+  ],
+  graficasUtilizadas: [
+    "GRÁFICA","VALID/THOMAS/IDEMIA/GD"
+  ],
+  concorrentes: [
+    "MOBI / TOTAL"
+  ],
+  rotina: [
+    "PAINEL MENSAL",
+    "REUNIÃO QUINZENAL - SEGUNDA",
+    "REUNIÃO QUINZENAL DE PRÉ-PAINEL - SEGUNDA",
+    "AGUARDANDO POSTAGEM - MAIS DE 5 DIAS ACIONAR A GRÁFICA PARA VER SE FOI AGILIZADO",
+    "AGENDAR COLETAS EM LOJA PARA DESTRUIÇÃO DOS CARTÕES",
+    "1/2X POR SEMANA ANALISAR PENDENTES E EXTRAVIAR DOCUMENTOS COM MAIS DE 15 DIAS SEM MOVIMENTAÇÃO",
+    "LOTES QUE TIVEREM INCONSISTÊNCIA - AVISAR O RODRIGO PARA TRATAR",
+    "LOTES QUE FOREM CUSTODIADOS - AVISAR O RODRIGO PARA TRATAR",
+    "TODA SEXTA ENVIAR O RANGE DE CORREIOS ATUALIZADO - PEDIR PARA OS CORREIOS",
+    "TODA SEXTA ENVIAR UMA ANÁLISE DE EXPANSÃO AO CLIENTE",
+    "ACOMPANHAMENTO DIÁRIO DOS LOTES",
+    "ANALISAR CASOS DE REEMISSÃO ENVIADOS PELA SILVANA - BARRAR AS VIAS ANTIGAS EM CASO DE REEMISSÃO EM ANDAMENTO",
+    "ANALISAR CASOS ENVIADOS PELA LETÍCIA ONDE HOUVE UMA ENTREGA E POSTERIORMENTE HOUVE UM INSUCESSO"
+  ],
+  infoCliente: [
+    "CLIENTE NÃO POSSUI CUSTÓDIA PARA PORTA A PORTA, APENAS PARA LOTE",
+    "CLIENTE OLHA POR STATUS E NÃO POR BAIXA EM SISTEMA",
+    "CLIENTE NÃO POSSUI VISÃO CORREIOS NO JALL",
+    "CLIENTE NÃO POSSUI ENTREGA EM CAIXA DE CORRESPONDÊNCIA",
+    "PARA DEDICADOS DOS LOTES, NÃO PRECISA PEDIR AUTORIZAÇÃO AO CLIENTE",
+    "NÃO PODEMOS EXTRAVIAR LOTES - PRECISA PROCURAR POR 20 DIAS, APÓS ISSO SE NÃO LOCALIZADO AÍ SIM PODEMOS SINISTRAR",
+    "CLIENTE NÃO TRATA AS INCONSISTÊNCIAS DO PORTA A PORTA",
+    "OS ARQUIVOS DO CLIENTE SÃO CRIPTOGRAFADOS",
+    "CONTRATOS INICIADOS EM \"NONA\" SÃO DE LOTES",
+    "CONTRATO \"SAOCARDEST\" UTILIZADO APENAS PARA COLETAS DE DESTRUIÇÃO",
+    "CLIENTE FOCA OS INDICADORES EM EFETIVIDADE X DEVOLUÇÃO POR CIDADE",
+    "EM CASOS DE NÃO ENTREGA, OS CARTÕES SÃO FRAGMENTADOS"
+  ]
+};
+
+const SECOES = [
+  { key: "contatos", titulo: "Contatos do cliente", classe: "email", tipo: "lista" },
+  { key: "produtos", titulo: "Produtos", classe: "", tipo: "lista" },
+  { key: "contratosPrincipais", titulo: "Contratos Principais", classe: "", tipo: "par" },
+  { key: "graficasUtilizadas", titulo: "Gráficas Utilizadas", classe: "", tipo: "lista" },
+  { key: "concorrentes", titulo: "Concorrentes", classe: "", tipo: "lista" },
+  { key: "rotina", titulo: "Rotina Operacional", classe: "", tipo: "lista" },
+  { key: "infoCliente", titulo: "Informações Importantes sobre o Cliente", classe: "", tipo: "lista" },
+];
+
+function highlight(texto, termo){
+  if(!termo) return texto;
+  const re = new RegExp('(' + termo.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'ig');
+  return texto.replace(re, '<mark>$1</mark>');
+}
+
+function render(termo=''){
+  const container = document.getElementById('sections');
+  const t = termo.trim().toLowerCase();
+  let algumResultado = false;
+
+  container.innerHTML = SECOES.map(sec => {
+    if (sec.tipo === 'par') {
+      const pares = DADOS[sec.key].filter(p => p.join(' ').toLowerCase().includes(t));
+      if (!pares.length) return '';
+      algumResultado = true;
+      return `
+        <div class="section">
+          <div class="section-title">${sec.titulo} <span class="count">${pares.length}</span></div>
+          <div class="item-grid">
+            ${pares.map(p => `
+              <div class="item-card pair-card">
+                <span>${highlight(p[0], termo)}</span>
+                <span class="pair-sep">↔</span>
+                <span>${highlight(p[1], termo)}</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    const itens = DADOS[sec.key].filter(i => i.toLowerCase().includes(t));
+    if(!itens.length) return '';
+    algumResultado = true;
+    return `
+      <div class="section">
+        <div class="section-title">${sec.titulo} <span class="count">${itens.length}</span></div>
+        <div class="item-grid">
+          ${itens.map(i => `<div class="item-card ${sec.classe}">${highlight(i, termo)}</div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+
+  if(!algumResultado){
+    container.innerHTML = `<div class="empty">Nenhum resultado encontrado para "${termo}"</div>`;
+  }
+}
+
+document.getElementById('searchInput').addEventListener('input', e => render(e.target.value));
+render();
+</script>
+</body>
+</html>

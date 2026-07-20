@@ -275,17 +275,31 @@
     'numero nao localizado','falta o numero','falta a numeracao','falta o bairro',
     'endereco errado','endereco incompleto','endereco insuficiente','insuficiente',
     'rua nao existe','logradouro nao encontrado','logradouro nao localizado',
-    'dificil acesso','cep incorreto','numeracao nao localizada','endereco nao localizado',
+    'cep incorreto','numeracao nao localizada','endereco nao localizado',
     'bairro nao localizado','numero incorreto','endereco divergente'
   ];
   var NOT_ADDRESS_KEYWORDS = [
     'desconhecido','ausente','mudou-se','mudou se','recusado','recusa','falecido',
-    'fechado','feriado','avaria','extraviado','nao procurado',
+    'fechado','feriado','avaria','extraviado','nao procurado','dificil acesso',
     'prazo expirado','recebedor nao autorizado','estabelecimento fechado','em rota',
     'loja fechada'
   ];
-  // Motivo que é SEMPRE tratado como erro operacional, independente de qualquer outra regra
-  var MOTIVO_ERRO_FORCADO = ['dest outra unidade', 'destinatario outra unidade'];
+  // Motivo que sempre precisa de revisão manual junto à base que atendeu
+  var MOTIVO_REVISAR_FORCADO = ['dest outra unidade', 'destinatario outra unidade'];
+
+  function parseDataBaixa(v){
+    if(!v) return null;
+    var m = String(v).trim().match(/^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}):(\d{2}):(\d{2})/);
+    if(!m) return null;
+    var d = new Date(parseInt(m[3],10), parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10), parseInt(m[6],10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function diasEntreBaixas(a, b){
+    var da = parseDataBaixa(a['Data Baixa']);
+    var db = parseDataBaixa(b['Data Baixa']);
+    if(!da || !db) return null;
+    return Math.round(Math.abs(db.getTime() - da.getTime()) / 86400000);
+  }
 
   var els = {
     fileInput: document.getElementById('fileInput'),
@@ -502,22 +516,33 @@
     return null; // unknown
   }
 
+  function normalizeNumero(v){
+    var n = norm(v).replace(/[.\-\/\s]/g,'');
+    if(n === '' || n === 'SN' || n === '0' || n === 'SEMNUMERO' || n === 'S N') return 'SEMNUMERO';
+    return n;
+  }
+
   function compareAddress(a,b){
     var fields = ['Logradouro','Numero','Complemento'];
     var diffs = [];
     fields.forEach(function(f){
-      var va = norm(a[f]), vb = norm(b[f]);
+      var va, vb;
+      if(f === 'Numero'){
+        va = normalizeNumero(a[f]); vb = normalizeNumero(b[f]);
+      } else {
+        va = norm(a[f]); vb = norm(b[f]);
+      }
       if(va !== vb) diffs.push(f);
     });
     return diffs;
   }
 
   // ---------- PAIR CLASSIFICATION ----------
-  function motivoForcaErro(motivo){
+  function motivoPedeRevisao(motivo){
     var m = norm(motivo);
     if(m === '') return false;
-    for(var i=0;i<MOTIVO_ERRO_FORCADO.length;i++){
-      if(m.indexOf(norm(MOTIVO_ERRO_FORCADO[i])) !== -1) return true;
+    for(var i=0;i<MOTIVO_REVISAR_FORCADO.length;i++){
+      if(m.indexOf(norm(MOTIVO_REVISAR_FORCADO[i])) !== -1) return true;
     }
     return false;
   }
@@ -526,12 +551,12 @@
     var typeA = baixaType(a), typeB = baixaType(b);
     var correios = isCorreios(a) || isCorreios(b);
 
-    // Regra 0 (prioridade máxima): motivo "Dest Outra Unidade" é SEMPRE erro operacional,
-    // independente de qualquer outra condição.
-    if(motivoForcaErro(a['Motivo de Devolucao']) || motivoForcaErro(b['Motivo de Devolucao'])){
+    // Regra 0 (prioridade máxima): motivo "Dest Outra Unidade" precisa de revisão manual
+    // junto à base que atendeu — não é classificado automaticamente como erro ou não erro.
+    if(motivoPedeRevisao(a['Motivo de Devolucao']) || motivoPedeRevisao(b['Motivo de Devolucao'])){
       return {
-        cat:'erro',
-        motivo:'Motivo de devolução "Dest Outra Unidade" identificado em uma das baixas — considerado erro operacional automaticamente.',
+        cat:'revisar',
+        motivo:'Motivo de devolução "Dest Outra Unidade" identificado — necessário revisar junto à base que atendeu.',
         detalhe:[]
       };
     }
@@ -552,26 +577,85 @@
       return {cat:'nao_erro', motivo:'Uma das baixas envolve produto/terceiro Correios — fluxo de entrega diferente do operacional próprio.', detalhe:[]};
     }
 
-    // Regra 4: nenhuma das duas é entrega (inclui devolução, destruição, sinistro sem par de entrega, outros)
+    // Regra 4: nenhuma das duas é entrega -> não houve entrega, não é erro (inclui devolução, destruição,
+    // sinistro sem par de entrega, outros)
     if(typeA !== 'ENTREGUE' && typeB !== 'ENTREGUE'){
-      return {cat:'nao_erro', motivo:'Nenhuma das duas baixas é de entrega — não há confirmação de entrega para contestar, não caracteriza erro.', detalhe:[]};
+      return {cat:'nao_erro', motivo:'Nenhuma das duas baixas é de entrega — não houve entrega, não caracteriza erro.', detalhe:[]};
     }
 
     // A partir daqui, exatamente um dos dois é ENTREGUE.
     var entregueRow = (typeA === 'ENTREGUE') ? a : b;
     var outraRow = (typeA === 'ENTREGUE') ? b : a;
+    var motivoBruto = (outraRow['Motivo de Devolucao'] || '').trim();
 
-    var addrStatus = motivoAddressStatus(outraRow['Motivo de Devolucao']);
+    // Motivo em branco / não informado -> revisar manualmente
+    if(motivoBruto === ''){
+      return {cat:'revisar', motivo:'Motivo de devolução não informado na baixa de não-entrega — necessário conferência manual.', detalhe:[]};
+    }
 
-    // Motivo da devolução NÃO é relacionado a endereço (ausente, desconhecido, mudou-se etc.) -> não erro
+    var addrStatus = motivoAddressStatus(motivoBruto);
+    var motivoNorm = norm(motivoBruto);
+    var diffs = compareAddress(entregueRow, outraRow);
+    var addressChanged = diffs.length > 0;
+    var dias = diasEntreBaixas(entregueRow, outraRow);
+
+    // Motivo NÃO relacionado a endereço (ausente, desconhecido, mudou-se, etc.)
     if(addrStatus === 'not_address'){
-      return {cat:'nao_erro', motivo:'A entrega foi confirmada e o motivo da outra baixa ("' + (outraRow['Motivo de Devolucao']||'—') + '") não está relacionado a endereço.', detalhe:[]};
+
+      // Regra especial: "Desconhecido" sem alteração de endereço, com 1 a 60 dias entre as baixas -> erro
+      if(motivoNorm.indexOf('DESCONHECIDO') !== -1){
+        if(!addressChanged && dias !== null && dias >= 1 && dias <= 60){
+          return {
+            cat:'erro',
+            motivo:'Motivo "Desconhecido" sem alteração de endereço e com ' + dias + ' dia(s) entre as baixas (dentro da janela de 1 a 60 dias) — considerado erro operacional.',
+            detalhe:[]
+          };
+        }
+        return {
+          cat:'nao_erro',
+          motivo:'Motivo "Desconhecido"' + (addressChanged ? ', mas houve alteração de endereço entre as baixas.' : (dias === null ? ', porém não foi possível calcular o intervalo entre as baixas.' : ', porém fora da janela de 1 a 60 dias (' + dias + ' dia(s)).')),
+          detalhe: addressChanged ? diffs : []
+        };
+      }
+
+      // Regra especial: "Mudou-se" sem alteração de endereço, com 1 a 30 dias entre as baixas -> erro
+      if(motivoNorm.indexOf('MUDOU-SE') !== -1 || motivoNorm.indexOf('MUDOU SE') !== -1){
+        if(!addressChanged && dias !== null && dias >= 1 && dias <= 30){
+          return {
+            cat:'erro',
+            motivo:'Motivo "Mudou-se" sem alteração de endereço e com ' + dias + ' dia(s) entre as baixas (dentro da janela de 1 a 30 dias) — considerado erro operacional.',
+            detalhe:[]
+          };
+        }
+        return {
+          cat:'nao_erro',
+          motivo:'Motivo "Mudou-se"' + (addressChanged ? ', mas houve alteração de endereço entre as baixas.' : (dias === null ? ', porém não foi possível calcular o intervalo entre as baixas.' : ', porém fora da janela de 1 a 30 dias (' + dias + ' dia(s)).')),
+          detalhe: addressChanged ? diffs : []
+        };
+      }
+
+      // Regra especial: "Difícil Acesso" sem alteração de endereço, com 1 a 20 dias entre as baixas -> erro
+      if(motivoNorm.indexOf('DIFICIL ACESSO') !== -1){
+        if(!addressChanged && dias !== null && dias >= 1 && dias <= 20){
+          return {
+            cat:'erro',
+            motivo:'Motivo "Difícil Acesso" sem alteração de endereço e com ' + dias + ' dia(s) entre as baixas (dentro da janela de 1 a 20 dias) — considerado erro operacional.',
+            detalhe:[]
+          };
+        }
+        return {
+          cat:'nao_erro',
+          motivo:'Motivo "Difícil Acesso"' + (addressChanged ? ', mas houve alteração de endereço entre as baixas.' : (dias === null ? ', porém não foi possível calcular o intervalo entre as baixas.' : ', porém fora da janela de 1 a 20 dias (' + dias + ' dia(s)).')),
+          detalhe: addressChanged ? diffs : []
+        };
+      }
+
+      return {cat:'nao_erro', motivo:'A entrega foi confirmada e o motivo da outra baixa ("' + motivoBruto + '") não está relacionado a endereço.', detalhe:[]};
     }
 
     // Motivo relacionado a endereço -> o que decide é se o endereço mudou entre as duas baixas.
     if(addrStatus === 'address'){
-      var diffs = compareAddress(entregueRow, outraRow);
-      if(diffs.length > 0){
+      if(addressChanged){
         // Houve alteração de endereço: isso justifica o resultado diferente, NÃO é erro operacional.
         return {
           cat:'nao_erro',
@@ -590,7 +674,7 @@
     // Motivo indeterminado (não reconhecido nas listas) -> revisar manualmente
     return {
       cat:'revisar',
-      motivo:'Motivo de devolução não reconhecido automaticamente ("' + (outraRow['Motivo de Devolucao']||'—') + '"). Necessário validar manualmente se é relacionado a endereço.',
+      motivo:'Motivo de devolução não reconhecido automaticamente ("' + motivoBruto + '"). Necessário validar manualmente se é relacionado a endereço.',
       detalhe:[]
     };
   }
